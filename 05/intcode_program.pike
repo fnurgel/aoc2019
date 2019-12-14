@@ -22,6 +22,14 @@ int find_param_mode(string param_modes, int position) {
     }
 }
 
+array(int) resolve_params(int nr, array int_codes, int position, string param_modes) {
+    array result = ({});
+    for (int i = 0; i < nr; i++) {
+        result += ({ resolve_param(int_codes, position + 1 + i, find_param_mode(param_modes, i)) });
+    }
+    return result;
+}
+
 int execute(array(int) int_codes, int input) {
     int position = 0;
     int output;
@@ -30,18 +38,17 @@ int execute(array(int) int_codes, int input) {
         string instruction = (string)int_codes[position];
         string opcode = instruction[sizeof(instruction)-2..];
         string param_modes = reverse(instruction)[2..];
+        array(int) params;
 
         switch((int)opcode) {
             case 1:
-                int int1 = resolve_param(int_codes, position + 1, find_param_mode(param_modes, 0));
-                int int2 = resolve_param(int_codes, position + 2, find_param_mode(param_modes, 1));
-                int_codes[int_codes[position + 3]] = int1 + int2;
+                params = resolve_params(2, int_codes, position, param_modes);
+                int_codes[int_codes[position + 3]] = params[0] + params[1];
                 position += 4;
                 break;
             case 2:
-                int1 = resolve_param(int_codes, position + 1, find_param_mode(param_modes, 0));
-                int2 = resolve_param(int_codes, position + 2, find_param_mode(param_modes, 1));
-                int_codes[int_codes[position + 3]] = int1 * int2;
+                params = resolve_params(2, int_codes, position, param_modes);
+                int_codes[int_codes[position + 3]] = params[0] * params[1];
                 position += 4;
                 break;
             case 3:
@@ -49,9 +56,48 @@ int execute(array(int) int_codes, int input) {
                 position += 2;
                 break;
             case 4:
-                output = resolve_param(int_codes, position + 1, find_param_mode(param_modes, 0));
+                params = resolve_params(1, int_codes, position, param_modes);
+                output = params[0];
                 position += 2;
-                write(sprintf("%O - %O\n", position, output));
+                write(sprintf("%O > %O\n", position, output));
+                break;
+            case 5:
+                params = resolve_params(2, int_codes, position, param_modes);
+                if (params[0] != 0) {
+                    position = params[1];
+                } else {
+                    position += 3;
+                }
+                break;
+            case 6:
+                params = resolve_params(2, int_codes, position, param_modes);
+                if (params[0] == 0) {
+                    position = params[1];
+                } else {
+                    position += 3;
+                }
+                break;
+            case 7:
+                params = resolve_params(2, int_codes, position, param_modes);
+                int value;
+                if (params[0] < params[1]) {
+                    value = 1;
+                } else {
+                    value = 0;
+                }
+                int_codes[int_codes[position + 3]] = value;
+                position += 4;
+                break;
+            case 8:
+                params = resolve_params(2, int_codes, position, param_modes);
+                value;
+                if (params[0] == params[1]) {
+                    value = 1;
+                } else {
+                    value = 0;
+                }
+                int_codes[int_codes[position + 3]] = value;
+                position += 4;
                 break;
             case 99:
                 return output;
