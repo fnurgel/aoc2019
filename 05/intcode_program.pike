@@ -1,3 +1,4 @@
+
 int resolve_position_mode(array(int) int_codes, int position) {
     return int_codes[int_codes[position]];
 }
