@@ -7,7 +7,7 @@ class instruction {
 
     void create(int instr, Thread.Fifo in, Thread.Fifo out) {
         string instr_str = (string)instr;
-        opcode = (int)instr_str[sizeof(instr_str)-2..];
+        opcode = (int)instr_str[<1..];
         string param_modes_str = reverse(instr_str)[2..];
         param_modes = map(param_modes_str / "", lambda(string v) { return (int)v; });
         input = in;
