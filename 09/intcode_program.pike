@@ -14,11 +14,16 @@ class instruction {
         output = out;
     }
 
-    int read_next_param(memory mem) {
+    int get_next_param_mode() {
         int param_mode = 0;
         if (param_modes_ptr < sizeof(param_modes)) {
             param_mode = param_modes[param_modes_ptr++];
         }
+        return param_mode;
+    }
+
+    int read_next_param(memory mem) {
+        int param_mode = get_next_param_mode();
         return mem->read(param_mode);
     }
 
@@ -49,9 +54,12 @@ class memory {
         relative_base += rel_base_to_add;
     }
 
-    void write(int data) {
-        _memory[_memory[instruction_ptr]] = data;
-        instruction_ptr++;
+    void write_data(int data, int mode) {
+        if (mode == 0) {  // position mode
+            _memory[_memory[instruction_ptr++]] = data;
+        } else if (mode == 2) {  // relative_mode
+            _memory[_memory[instruction_ptr++] + relative_base] = data;
+        }
     }
 
     void jmp(int ptr) {
@@ -65,7 +73,7 @@ class memory {
         } else if (mode == 1) {  // immediate_mode
             data = _memory[instruction_ptr];
         } else if (mode == 2) {  // relative_mode
-            data = _memory[_memory[instruction_ptr + relative_base]];
+            data = _memory[_memory[instruction_ptr] + relative_base];
         }
         instruction_ptr++;
         return data;
@@ -77,15 +85,17 @@ class memory {
 }
 
 void instr_add(memory mem, instruction instr) {
-    mem->write(instr->read_next_param(mem) + instr->read_next_param(mem));
+    array(int) params = instr->params(mem, 2);
+    mem->write_data(params[0] + params[1], instr->get_next_param_mode());
 }
 
 void instr_mult(memory mem, instruction instr) {
-    mem->write(instr->read_next_param(mem) * instr->read_next_param(mem));
+    array(int) params = instr->params(mem, 2);
+    mem->write_data(params[0] * params[1], instr->get_next_param_mode());
 }
 
 void instr_input(memory mem, instruction instr) {
-    mem->write(instr->input.read());
+    mem->write_data(instr->input.read(), instr->get_next_param_mode());
 }
 
 void instr_output(memory mem, instruction instr) {
@@ -112,7 +122,7 @@ void instr_eq(memory mem, instruction instr) {
     if (params[0] == params[1]) {
         value = 1;
     }
-    mem->write(value);
+    mem->write_data(value, instr->get_next_param_mode());
 }
 
 void instr_lt(memory mem, instruction instr) {
@@ -121,7 +131,7 @@ void instr_lt(memory mem, instruction instr) {
     if (params[0] < params[1]) {
         value = 1;
     }
-    mem->write(value);
+    mem->write_data(value, instr->get_next_param_mode());
 }
 
 void instr_rel_base(memory mem, instruction instr) {
@@ -138,7 +148,8 @@ void execute(memory mem, Thread.Fifo input, Thread.Fifo output) {
         5: instr_jmpnz,
         6: instr_jmpz,
         7: instr_lt,
-        8: instr_eq
+        8: instr_eq,
+        9: instr_rel_base
     ]);
     while (true) {
         instruction instr = instruction(mem->read(1), input, output);
@@ -146,7 +157,6 @@ void execute(memory mem, Thread.Fifo input, Thread.Fifo output) {
         if (instr->opcode == 99) {
             return;
         }
-
         ops[instr->opcode](mem, instr);
     }
 }
