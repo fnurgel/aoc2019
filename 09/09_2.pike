@@ -11,7 +11,7 @@ int main() {
         object(Thread.Fifo) input_fifo = Thread.Fifo();
         object(Thread.Fifo) output_fifo = Thread.Fifo();
 
-        input_fifo.write(1);
+        input_fifo.write(2);
 
         execute(mem->copy(), input_fifo, output_fifo);
 
