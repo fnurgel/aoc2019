@@ -76,7 +76,6 @@ class memory {
             data = _memory[_memory[instruction_ptr] + relative_base];
         }
         instruction_ptr++;
-//        write(sprintf("%O\n", instruction_ptr));
         return data;
     }
 
@@ -156,11 +155,10 @@ void execute(memory mem, Thread.Fifo input, Thread.Queue output, Thread.Fifo end
         instruction instr = instruction(mem->read(1), input, output);
 
         if (instr->opcode == 99) {
-            write("Done!");
+            write("Done!\n");
             ended.write(0);
             return;
         }
-//        write(sprintf("opcode: %O\n", instr->opcode));
         ops[instr->opcode](mem, instr);
     }
 }
