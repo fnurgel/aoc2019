@@ -62,7 +62,6 @@ int main() {
             if (output > highest_output) {
                 highest_output = output;
             }
-
         }
 
         write(sprintf("%O\n", highest_output));

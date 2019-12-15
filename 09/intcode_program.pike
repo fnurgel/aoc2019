@@ -57,7 +57,7 @@ class memory {
         int data;
         if (mode == 0) {
             data = _memory[_memory[instruction_ptr]];
-        } else {
+        } else if (mode == 1) {
             data = _memory[instruction_ptr];
         }
         instruction_ptr++;
@@ -99,7 +99,7 @@ void instr_jmpnz(memory mem, instruction instr) {
     }
 }
 
-void instr_equals(memory mem, instruction instr) {
+void instr_eq(memory mem, instruction instr) {
     array(int) params = instr->params(mem, 2);
     int value = 0;
     if (params[0] == params[1]) {
@@ -118,40 +118,23 @@ void instr_lt(memory mem, instruction instr) {
 }
 
 void execute(memory mem, Thread.Fifo input, Thread.Fifo output) {
-
+    mapping ops = ([
+        1: instr_add,
+        2: instr_mult,
+        3: instr_input,
+        4: instr_output,
+        5: instr_jmpnz,
+        6: instr_jmpz,
+        7: instr_lt,
+        8: instr_eq
+    ]);
     while (true) {
         instruction instr = instruction(mem->read(1), input, output);
 
-        function op;
-
-        switch(instr->opcode) {
-            case 1:
-                op = instr_add;
-                break;
-            case 2:
-                op = instr_mult;
-                break;
-            case 3:
-                op = instr_input;
-                break;
-            case 4:
-                op = instr_output;
-                break;
-            case 5:
-                op = instr_jmpnz;
-                break;
-            case 6:
-                op = instr_jmpz;
-                break;
-            case 7:
-                op = instr_lt;
-                break;
-            case 8:
-                op = instr_equals;
-                break;
-            case 99:
-                return;
+        if (instr->opcode == 99) {
+            return;
         }
-        op(mem, instr);
+
+        ops[instr->opcode](mem, instr);
     }
 }
