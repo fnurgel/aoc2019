@@ -34,6 +34,7 @@ class instruction {
 class memory {
     array(int) _memory;
     int instruction_ptr;
+    int relative_base = 0;
 
     void create(array(int) data, int extend_to_size) {
         instruction_ptr = 0;
@@ -42,6 +43,10 @@ class memory {
         } else {
             _memory = data - ({});
         }
+    }
+
+    void add_base(int rel_base_to_add) {
+        relative_base += rel_base_to_add;
     }
 
     void write(int data) {
@@ -55,10 +60,12 @@ class memory {
 
     int read(int mode) {
         int data;
-        if (mode == 0) {
+        if (mode == 0) {  // position mode
             data = _memory[_memory[instruction_ptr]];
-        } else if (mode == 1) {
+        } else if (mode == 1) {  // immediate_mode
             data = _memory[instruction_ptr];
+        } else if (mode == 2) {  // relative_mode
+            data = _memory[_memory[instruction_ptr + relative_base]];
         }
         instruction_ptr++;
         return data;
@@ -115,6 +122,11 @@ void instr_lt(memory mem, instruction instr) {
         value = 1;
     }
     mem->write(value);
+}
+
+void instr_rel_base(memory mem, instruction instr) {
+    array(int) params = instr->params(mem, 1);
+    mem->add_base(params[0]);
 }
 
 void execute(memory mem, Thread.Fifo input, Thread.Fifo output) {
