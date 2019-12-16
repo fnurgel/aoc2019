@@ -1,45 +1,79 @@
-class coord {
-    int x, y, z;
 
-    void create(int _x, int _y, int _z) {
-        x = _x;
-        y = _y;
-        z = _z;
-    }
+int lcm(array(int) nums) {
+    int lcm = 1;
+    int divisor = 2;
 
-    string to_string() {
-        return sprintf("% 03d% 03d% 03d", x, y, z);
+    while (true) {
+        int counter = 0;
+        int divisable = false;
+
+        for (int i=0; i<sizeof(nums); i++) {
+            if (nums[i] == 0) {
+                return 0;
+            }
+            else if (nums[i] < 0) {
+                nums[i] = -nums[i];
+            }
+            if (nums[i] == 1) {
+                counter++;
+            }
+
+            if (nums[i] % divisor == 0) {
+                divisable = true;
+                nums[i] = nums[i] / divisor;
+            }
+        }
+
+        if (divisable) {
+            lcm = lcm * divisor;
+        } else {
+            divisor++;
+        }
+
+        if (counter == sizeof(nums)) {
+            return lcm;
+        }
     }
 }
 
-class planet {
-    inherit coord;
+void find_axis_repeat(array(int) coords, string id, Thread.Fifo end_signal) {
+    array(int) vel = allocate(4);
+    string origin = sprintf("%O", coords);
 
-    coord velocity = coord(0,0,0);
+    int steps = 0;
+    while (true) {
+        int gr = limit(-1, coords[1] - coords[0], 1);
+        vel[0] += gr;
+        vel[1] -= gr;
+        gr = limit(-1, coords[2] - coords[0], 1);
+        vel[0] += gr;
+        vel[2] -= gr;
+        gr = limit(-1, coords[3] - coords[0], 1);
+        vel[0] += gr;
+        vel[3] -= gr;
+        gr = limit(-1, coords[2] - coords[1], 1);
+        vel[1] += gr;
+        vel[2] -= gr;
+        gr = limit(-1, coords[3] - coords[1], 1);
+        vel[1] += gr;
+        vel[3] -= gr;
+        gr = limit(-1, coords[3] - coords[2], 1);
+        vel[2] += gr;
+        vel[3] -= gr;
 
-    coord velocity_towards(coord other) {
-        int vx = x - other.x > 0 ? -1 : x - other.x < 0 ? 1 : 0;
-        int vy = y - other.y > 0 ? -1 : y - other.y < 0 ? 1 : 0;
-        int vz = z - other.z > 0 ? -1 : z - other.z < 0 ? 1 : 0;
-        return coord(vx, vy, vz);
-    }
+        coords[0] += vel[0];
+        coords[1] += vel[1];
+        coords[2] += vel[2];
+        coords[3] += vel[3];
 
-    void apply_velocity(coord v) {
-        velocity.x += v.x;
-        velocity.y += v.y;
-        velocity.z += v.z;
-
-        x += velocity.x;
-        y += velocity.y;
-        z += velocity.z;
-    }
-
-    int get_energy() {
-        return (abs(x) + abs(y) + abs(z)) * (abs(velocity.x) + abs(velocity.y) + abs(velocity.z));
-    }
-
-    string to_string() {
-        return sprintf("%s%s", ::to_string(), velocity->to_string());
+        steps++;
+        if (vel[0] == 0 && vel[1] == 0 && vel[2] == 0 && vel[3] == 0) {
+            if (sprintf("%O", coords) == origin) {
+                write(sprintf("%s: repeat on step %d\n", id, steps));
+                end_signal.write(steps);
+                return;
+            }
+        }          
     }
 }
 
@@ -47,76 +81,27 @@ int main() {
     Stdio.File file = Stdio.FILE();
     file->open("input", "r");
 
-    array(planet) planet_coords = ({});
+    array(int) arr_x = ({});
+    array(int) arr_y = ({});
+    array(int) arr_z = ({});
 
     foreach(file->line_iterator(true); int idx; string line) {
         int x, y, z;
         sscanf(line, "<x=%d, y=%d, z=%d>", x, y, z);
-        planet_coords += ({ planet(x, y, z) });
+        arr_x += ({ x });
+        arr_y += ({ y });
+        arr_z += ({ z });
     }
-    write(sprintf("%O\n", map(planet_coords, lambda(planet c) { return c.to_string(); })));
+    object(Thread.Fifo) end_signal = Thread.Fifo();
 
-    string str_to_hash = "";
-    foreach(planet_coords, planet p) {
-        str_to_hash += p.to_string();
-    }
-    int origin_hash = hash(str_to_hash);
+    thread_create(find_axis_repeat, arr_x, "x", end_signal);
+    thread_create(find_axis_repeat, arr_y, "y", end_signal);
+    thread_create(find_axis_repeat, arr_z, "z", end_signal);
 
-    mapping velocities = ([]);
-    mapping final_velocities = ([]);
+    array(int) nums = ({});
+    nums += ({ end_signal.read() });
+    nums += ({ end_signal.read() });
+    nums += ({ end_signal.read() });
 
-    int step = 0;
-    while (true) {
-
-        int start_planet = 0;
-        do {
-            for (int i=start_planet+1;i<sizeof(planet_coords);i++) {
-                if (velocities[start_planet] == 0) {
-                    velocities[start_planet] = allocate(sizeof(planet_coords));
-                }
-                velocities[start_planet][i] = planet_coords[start_planet]->velocity_towards(planet_coords[i]);
-                if (velocities[i] == 0) {
-                    velocities[i] = allocate(sizeof(planet_coords));
-                }
-                velocities[i][start_planet] = planet_coords[i]->velocity_towards(planet_coords[start_planet]);
-            }
-            start_planet++;
-        } while (start_planet < sizeof(planet_coords)-1);
-
-        foreach(indices(velocities), int planet_idx) {
-            int vx = 0;
-            int vy = 0;
-            int vz = 0;
-            foreach(velocities[planet_idx], coord planet_vel) {
-                if (planet_vel != 0) {
-                    vx += planet_vel.x;
-                    vy += planet_vel.y;
-                    vz += planet_vel.z;
-                }
-            }
-            final_velocities[planet_idx] = coord(vx, vy, vz);
-        }
-
-        foreach(indices(final_velocities), int planet_idx) {
-            planet_coords[planet_idx]->apply_velocity(final_velocities[planet_idx]);
-        }
-        step++;
-        string str_to_hash = "";
-        foreach(planet_coords, planet p) {
-            str_to_hash += p.to_string();
-        }
-        int hash = hash(str_to_hash);
-        if (hash == origin_hash) {
-            write(sprintf("Match found on step %d %d %O\n", step, hash, map(planet_coords, lambda(planet c) { return c.to_string(); })));
-            return 0;
-        }
-
-    }
-
-    int energy = 0;
-    foreach(planet_coords, planet p) {
-        energy += p->get_energy();
-    }
-
-    write(sprintf("Total enrgy: %O", energy));
+    write(sprintf("%O\n", lcm(nums)));
 }
