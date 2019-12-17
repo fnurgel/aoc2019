@@ -1,16 +1,3 @@
-class result_multiple {
-    string name;
-    int multiple;
-
-    void create(string _name, int _multiple) {
-        name = _name;
-        multiple = _multiple;
-    }
-
-    string to_string() {
-        return sprintf("%s * %d", name, multiple);
-    }
-}
 
 class chemical {
     string name;
@@ -31,31 +18,27 @@ class chemical {
 }
 
 mapping reactions = ([]);
+mapping materials = ([]);
 
-array(result_multiple) quantity_needed(string name, int quantity) {
+void do_reaction(string name, int quantity) {
     chemical c = reactions[name];
 
-    if (c == 0) {
-        return ({ result_multiple(name, quantity) });
-    }
-
-    int multiplier = quantity / c.quantity;
-
-    int less_than_produced = quantity % c.quantity;
-
-    if (less_than_produced > 0) {
+    int in_stock = materials[c.name];
+    int used_from_stock = min(in_stock, quantity);
+    int left_to_produce = quantity - used_from_stock;
+    int multiplier = left_to_produce / c.quantity;
+    if (left_to_produce % c.quantity > 0) {
         multiplier++;
     }
-    array(result_multiple) needed_result = ({});
     foreach(c.needed_chemicals, chemical needed_c) {
-        write(sprintf("%O\n", needed_c.to_string()));
         if (needed_c.name == "ORE") {
-            needed_result += ({ result_multiple(name, quantity) });
+            materials[needed_c.name] += needed_c.quantity * multiplier;
         } else {
-            needed_result += quantity_needed(needed_c.name, needed_c.quantity * multiplier);
+            do_reaction(needed_c.name, needed_c.quantity * multiplier);
+            materials[needed_c.name] -= needed_c.quantity * multiplier;
         }
     }
-    return needed_result;
+    materials[name] += c.quantity * multiplier;
 }
 
 int main() {
@@ -71,27 +54,7 @@ int main() {
         reactions[result.name] = result;
     }
 
-    write(sprintf("%O\n", map(values(reactions), lambda(chemical c) { return c->to_string(); })));
+    do_reaction("FUEL", 1);
 
-    array(result_multiple) needed = quantity_needed("FUEL", 1);
-
-    write(sprintf("%O\n", map(needed, lambda(result_multiple r) { return r->to_string(); })));
-
-    mapping amount = ([]);
-    foreach(needed, result_multiple r) {
-        amount[r.name] += r->multiple;
-    }
-    write(sprintf("Amount: %O\n", amount));
-
-    int total_ore = 0;
-    foreach(indices(amount), string name) {
-        int ore_amount = amount[name];
-        int multiplier = ore_amount / reactions[name].quantity;
-        if (ore_amount % reactions[name].quantity > 0) {
-            multiplier++;
-        }
-        write(sprintf("%s: %d\n", name, multiplier));
-        total_ore += multiplier * reactions[name].needed_chemicals[0].quantity;
-    }
-    write(sprintf("Ore: %O\n", total_ore));
+    write(sprintf("Materials: %O\n", materials));
 }
