@@ -1,11 +1,5 @@
 inherit "intcode_program";
 
-mapping chars = ([
-    35: "#",
-    46: ".",
-    10: "\n"
-]);
-
 array(array(int)) grid = allocate(100);
 
 void display_output(Thread.Queue out) {
@@ -22,14 +16,14 @@ void display_output(Thread.Queue out) {
             continue;
         }
         grid[y][x++] = char;
-        write(sprintf("%c", char));
+        write(int2char(char));
     }
 }
 
 void display_grid() {
     for (int i=0; i<sizeof(grid); i++) {
         for (int j=0; j<sizeof(grid); j++) {
-            write(sprintf("%c", grid[i][j]));
+            write(int2char(grid[i][j]));
         }
         write("\n");
     }
@@ -43,7 +37,7 @@ int is_crossing(int y, int x) {
         return false;
     }
     for (int i=0; i<sizeof(dy); i++) {
-        if (grid[y+dy[i]][x+dx[i]] != 35) {
+        if (grid[y+dy[i]][x+dx[i]] != '#') {
             return false;
         }
     }
@@ -75,11 +69,11 @@ int main() {
         int alignment = 0;
         for (int y=0; y<sizeof(grid); y++) {
             for (int x=0; x<sizeof(grid[y]); x++) {
-                if (grid[y][x] == 35) {
+                if (grid[y][x] == '#') {
                     int is = is_crossing(y, x);
                     if (is) {
                         alignment += y * x;
-                        grid[y][x] = 79;
+                        grid[y][x] = 'O';
                     }
                 }
             }
